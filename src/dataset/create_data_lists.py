@@ -11,8 +11,8 @@ def save_image_list(labels: list[list[int]], image_paths: list[str], file_path, 
     Saves the image list and corresponding labels to JSON files.
 
     Args:
-        labels (_type_): _description_
-        image_paths (_type_): _description_
+        labels (list[list[int]]): List of labels for each image.
+        image_paths (list[str]): List of image paths.
         file_path (_type_): _description_
         split (str, optional): _description_. Defaults to "train".
 
