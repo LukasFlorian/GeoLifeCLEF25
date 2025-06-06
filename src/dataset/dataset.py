@@ -9,13 +9,14 @@ import rasterio
 import numpy as np
 from torch.utils.data import Dataset
 from .helpers import quantile_normalize, construct_patch_path
+import pandas as pd
 
 
 class TrainDataset(Dataset):
     """
     Custom dataset class for loading and preprocessing training data. This class inherits form PyTorch's Dataset class.
     """
-    def __init__(self, data_dir, metadata, transform=None):
+    def __init__(self, data_dir: str, metadata: pd.DataFrame, transform=None, grid_length: float=0.01):
         """
         Initialize the dataset.
         
@@ -34,16 +35,35 @@ class TrainDataset(Dataset):
         self.metadata['speciesId'] = self.metadata['speciesId'].astype(int)
 
         # Create a dictionary mapping surveyId to a list of speciesId occurring in that survey
+        
         self.label_dict = self.metadata.groupby('surveyId')['speciesId'].apply(list).to_dict()
 
         self.metadata = self.metadata.drop_duplicates(subset="surveyId").reset_index(drop=True)
 
         self.num_classes = 11255
+        
+        min_lat = self.metadata['lat'].min()
+        min_lon = self.metadata['lon'].min()
+        
+        row = self.metadata['lat'].apply(lambda x: int((x - min_lat) / grid_length))
+        col = self.metadata['lon'].apply(lambda x: int((x - min_lon) / grid_length))
+        
+        self.metadata["box"] = self.metadata.apply(lambda x: f"{row.loc[x.name]}_{col.loc[x.name]}", axis=1)
+        
+        self.box_survey_dict = self.metadata.groupby('box')['surveyId'].apply(list)
+        
+        
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Return the total number of samples in the dataset.
+        """
         return len(self.metadata)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor, str]:
+        """
+        Return one sample of data.
+        """
 
         survey_id = self.metadata.surveyId[idx]
         species_ids = self.label_dict.get(survey_id, [])  # Get list of species IDs for the survey ID
@@ -62,6 +82,7 @@ class TrainDataset(Dataset):
         image = self.transform(image)
 
         return image, label, survey_id
+        
 
 class TestDataset(TrainDataset):
     """
