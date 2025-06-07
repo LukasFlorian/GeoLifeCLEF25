@@ -9,7 +9,10 @@ import rasterio
 import numpy as np
 from torch.utils.data import Dataset
 import pandas as pd
+from typing import overload
+from torch.utils.data import DataLoader
 from .helpers import quantile_normalize, construct_patch_path
+from src.helpers import select_device
 
 
 class TrainDataset(Dataset):
@@ -44,16 +47,18 @@ class TrainDataset(Dataset):
         # Convert speciesId to integer type
         self.metadata['speciesId'] = self.metadata['speciesId'].astype(int)
 
+        self.label_dict = self.plain_labels()
+        self.drop_duplicates()
+
         if grid_length:
             self.label_dict = self.box_label_union(grid_length)
 
         elif pseudo_label_generator:
             self.label_dict = self.pseudo_labels(pseudo_label_generator)
-
-        else:
-            self.label_dict = self.plain_labels()
-
-        self.drop_duplicates()
+    
+    @overload
+    def __init__(self,):
+    
     
     def drop_duplicates(self):
         """
@@ -70,13 +75,9 @@ class TrainDataset(Dataset):
     def box_label_union(self,
                         grid_length: float = 0.01
                         ) -> dict[int, list[int]]:
-        
-        # Generate the plain label dict that maps surveyId to speciesId        
-        plain_labels = self.plain_labels()
-        
-        # Drop duplicate rows from the metadata DataFrame based on the 'surveyId' column.
-        self.drop_duplicates()
-
+        """
+        Generate the box label union for each surveyId.
+        """
         # Get the minimum latitute and longitude from the metadata DataFrame
         min_lat = self.metadata['lat'].min()
         min_lon = self.metadata['lon'].min()
@@ -92,12 +93,37 @@ class TrainDataset(Dataset):
         box_to_surveys_map = self.metadata.groupby('box')['surveyId'].apply(list)
 
         # Mapping from box to species (label union) in the box
-        box_to_species_map = box_to_surveys_map.apply(lambda x: list(set([speciesId for survey in x for speciesId in plain_labels[survey]])))
+        box_to_species_map = box_to_surveys_map.apply(lambda x: list(set([speciesId for survey in x for speciesId in self.label_dict[survey]])))
 
         # Assignment of box labels to surveys
         labels = self.metadata['box'].apply(lambda x: box_to_species_map[x]).to_dict()
 
         return labels
+
+    def pseudo_labels(self,
+                      pseudo_label_generator: torch.nn.Module
+                      ) -> dict[int, list[int]]:
+        """
+        Generate pseudo labels for the dataset using a pseudo label generator.
+        """
+        # Move the model to the device
+        device = select_device()
+        pseudo_label_generator.to(device)
+
+        # Set the model to evaluation mode
+        pseudo_label_generator.eval()
+
+        self.label_dict = self.plain_labels()
+        labels = {}
+        data_loader = DataLoader(self, batch_size=1, shuffle=False, num_workers=8)
+        with torch.no_grad():
+            # Iterate over the dataset
+            for batch_id, (bands, label, survey_id) in data_loader:
+                bands = bands.to(device)
+                output = pseudo_label_generator(bands)
+                labels[survey_id.item()] = output.argmax(dim=1).cpu().numpy().tolist()
+        return labels
+        
 
 
     def __len__(self) -> int:
@@ -135,6 +161,7 @@ class TestDataset(TrainDataset):
     Custom dataset class for loading and preprocessing test data. This class inherits form PyTorch's Dataset class.
     """
     def __init__(self, data_dir, metadata, transform=None):
+
         self.transform = transform
         self.data_dir = data_dir
         self.metadata = metadata
