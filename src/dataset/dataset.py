@@ -8,15 +8,20 @@ import torch
 import rasterio
 import numpy as np
 from torch.utils.data import Dataset
-from .helpers import quantile_normalize, construct_patch_path
 import pandas as pd
+from .helpers import quantile_normalize, construct_patch_path
 
 
 class TrainDataset(Dataset):
     """
     Custom dataset class for loading and preprocessing training data. This class inherits form PyTorch's Dataset class.
     """
-    def __init__(self, data_dir: str, metadata: pd.DataFrame, transform=None, grid_length: float=0.01):
+    def __init__(self,
+                 data_dir: str,
+                 metadata: pd.DataFrame,
+                 transform=None,
+                 grid_length: float | None = None,
+                 pseudo_label_generator: torch.nn.Module | None = None):
         """
         Initialize the dataset.
         
@@ -25,6 +30,11 @@ class TrainDataset(Dataset):
             metadata (pd.DataFrame): DataFrame containing metadata.
             transform (callable, optional): Optional transform to be applied on a sample.
         """
+        
+        if grid_length and pseudo_label_generator:
+            raise ValueError("Cannot use both grid_length and pseudo_label_generator.")
+        
+        self.num_classes = 11255
         self.transform = transform
         self.data_dir = data_dir
 
@@ -34,25 +44,61 @@ class TrainDataset(Dataset):
         # Convert speciesId to integer type
         self.metadata['speciesId'] = self.metadata['speciesId'].astype(int)
 
-        # Create a dictionary mapping surveyId to a list of speciesId occurring in that survey
-        
-        self.label_dict = self.metadata.groupby('surveyId')['speciesId'].apply(list).to_dict()
+        if grid_length:
+            self.label_dict = self.box_label_union(grid_length)
 
+        elif pseudo_label_generator:
+            self.label_dict = self.pseudo_labels(pseudo_label_generator)
+
+        else:
+            self.label_dict = self.plain_labels()
+
+        self.drop_duplicates()
+    
+    def drop_duplicates(self):
+        """
+        Drop duplicate rows from the metadata DataFrame based on the 'surveyId' column.
+        """
         self.metadata = self.metadata.drop_duplicates(subset="surveyId").reset_index(drop=True)
 
-        self.num_classes = 11255
+    def plain_labels(self) -> dict[int, list[int]]:
+        """
+        Return the plain labels for a given survey.
+        """
+        return self.metadata.groupby('surveyId')['speciesId'].apply(list).to_dict()
+
+    def box_label_union(self,
+                        grid_length: float = 0.01
+                        ) -> dict[int, list[int]]:
         
+        # Generate the plain label dict that maps surveyId to speciesId        
+        plain_labels = self.plain_labels()
+        
+        # Drop duplicate rows from the metadata DataFrame based on the 'surveyId' column.
+        self.drop_duplicates()
+
+        # Get the minimum latitute and longitude from the metadata DataFrame
         min_lat = self.metadata['lat'].min()
         min_lon = self.metadata['lon'].min()
-        
+
+        # Get the row and col index in the grid for each surveyId
         row = self.metadata['lat'].apply(lambda x: int((x - min_lat) / grid_length))
         col = self.metadata['lon'].apply(lambda x: int((x - min_lon) / grid_length))
-        
+
+        # Generate the box id for each surveyId
         self.metadata["box"] = self.metadata.apply(lambda x: f"{row.loc[x.name]}_{col.loc[x.name]}", axis=1)
-        
-        self.box_survey_dict = self.metadata.groupby('box')['surveyId'].apply(list)
-        
-        
+
+        # Mapping from box to surveys in the box
+        box_to_surveys_map = self.metadata.groupby('box')['surveyId'].apply(list)
+
+        # Mapping from box to species (label union) in the box
+        box_to_species_map = box_to_surveys_map.apply(lambda x: list(set([speciesId for survey in x for speciesId in plain_labels[survey]])))
+
+        # Assignment of box labels to surveys
+        labels = self.metadata['box'].apply(lambda x: box_to_species_map[x]).to_dict()
+
+        return labels
+
 
     def __len__(self) -> int:
         """

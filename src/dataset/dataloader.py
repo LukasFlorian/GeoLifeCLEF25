@@ -7,8 +7,8 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import pandas as pd
-from dataset import TrainDataset, TestDataset
-from helpers import construct_patch_path, quantile_normalize
+from .dataset import TrainDataset, TestDataset
+from .helpers import construct_patch_path, quantile_normalize
 
 def create_data_loader(dataset_path: str,
                        split: Literal["train", "test"] = "train",
@@ -33,6 +33,13 @@ def create_data_loader(dataset_path: str,
         train_data_path = "data/SatellitePatches/PA-train"
         train_metadata_path = "data/GLC25_PA_metadata_train.csv"
         train_metadata = pd.read_csv(train_metadata_path)
-        train_dataset = TrainDataset(train_data_path, train_metadata, transform=transform)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    return None
+
+        train_dataset = TrainDataset(train_data_path,
+                                     train_metadata,
+                                     transform=transform)
+
+        train_loader = DataLoader(train_dataset,
+                                  batch_size=batch_size,
+                                  shuffle=True,
+                                  num_workers=num_workers)
+    return train_loader

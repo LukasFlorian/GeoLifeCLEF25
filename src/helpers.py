@@ -43,17 +43,18 @@ def select_device() -> torch.device:
 def train_loop(model: torch.nn.Module,
                train_loader: DataLoader,
                optimizer: torch.optim.Optimizer,
-               criterion: torch.nn.Module,
                device: torch.device = torch.device('cpu'),
                num_epochs: int = 25,
-               *scheduler: torch.optim.lr_scheduler.CosineAnnealingLR,
+               scheduler: torch.optim.lr_scheduler.CosineAnnealingLR | None = None,
                positive_weight_factor: float = 1.0
                ):
+    
     print(f"Training for {num_epochs} epochs started.")
 
     for epoch in range(num_epochs):
         # set the model to training mode
         model.train()
+        criterion = torch.nn.BCEWithLogitsLoss()
         for batch_idx, (data, targets, _) in enumerate(train_loader):
 
             # move the data to the device
@@ -67,8 +68,8 @@ def train_loop(model: torch.nn.Module,
             outputs = model(data)
 
             # compute the loss
-            pos_weight = targets*positive_weight_factor  # All positive weights are equal to 10
-            criterion = torch.nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+            pos_weight = targets*positive_weight_factor
+            criterion.pos_weight = pos_weight # Set the positive weight for the loss function
             loss = criterion(outputs, targets)
 
             loss.backward()
@@ -80,8 +81,6 @@ def train_loop(model: torch.nn.Module,
         if scheduler:
             scheduler.step()
             print("Scheduler:",scheduler.state_dict())
-
-
 
 
 
