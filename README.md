@@ -2,8 +2,34 @@
 
 https://www.kaggle.com/competitions/geolifeclef-2025
 
-## Challenge Dataset
-test
+## Ausführung und Installation
+
+### Installation notwendiger Libraries
+`pip install -r requirements.txt`
+
+### Ausführung des Interface zur Datenvisualisierung
+`streamlit run interface.py`
+
+- Browser sollte unter http://localhost:8501/ ein Interface zur Visualisierung der Daten anzeigen
+
+- Work in Progress, funktioniert möglicherweise noch nicht, aber ist im Pflichtenheft auch optional
+
+### Ausführung des Jupyter Notebooks mit dem Kernel, in welchem die Requirements installiert wurden
+- Jupyter Notebook `sentinel-2-data-processing-and-normalization.ipynb`: Bereitgestellt durch Veranstalter der Challenge, visualisiert Datenaufbereitungsmethoden
+- Jupyter Notebook `Modelltraining.ipynb`: Eigenes Notebook zum Trainieren des Modells
+
+## Projektstruktur:
+- `research` enthält gelesene Forschungsarbeiten der Vorjahre der Challenge
+- `src` enthält den Quellcode des Projekts abgesehen vom Interface
+  - `dataset`: enthält den Quellcode zur Datenverarbeitung
+  - `model`: enthält den Quellcode zum Modelltraining
+  - `helpers.py`: Helferfunktionen
+- `interface.py`: Interface zur Datenvisualisierung
+- `requirements.txt`: Auflistung notwendiger Libraries
+- `Modelltraining.ipynb`: Eigenes Notebook zum Trainieren des Modells
+- `sentinel-2-data-processing-and-normalization.ipynb`: Bereitgestellt durch Veranstalter der Challenge, visualisiert Datenaufbereitungsmethoden
+
+## Data
 
 ### Presence-Absence
 - 100k surveys
