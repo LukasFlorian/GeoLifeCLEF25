@@ -1,6 +1,5 @@
 # Custom
-*.pth
-model_checkpoints
+resnet50-*.pth
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
