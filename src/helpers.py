@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 import pandas as pd
 from typing import Literal
-from src.dataset.dataset import TestDataset, TrainDataset
+# from src.dataset.dataset import TestDataset, TrainDataset
 import tqdm
 import numpy as np
 
@@ -119,3 +119,23 @@ def test_loop(model: torch.nn.Module,
 
             surveys.extend(survey_id.cpu().numpy())
     return surveys, top_k_indices
+
+def set_seed(seed: int = 77) -> None:
+    """
+    Set seed for reproducibility.
+    
+    Args:
+        seed (int): Seed value. Default is 77.
+    """
+    # Set seed for Python's built-in random number generator
+    torch.manual_seed(seed)
+    # Set seed for numpy
+    np.random.seed(seed)
+    # Set seed for CUDA if available
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        # Set cuDNN's random number generator seed for deterministic behavior
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    if torch.mps.is_available():
+        torch.mps.manual_seed(seed)

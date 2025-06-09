@@ -9,8 +9,8 @@ import rasterio
 import numpy as np
 from torch.utils.data import Dataset
 import pandas as pd
-from typing import overload
 from torch.utils.data import DataLoader
+from torchvision import transforms
 from .helpers import quantile_normalize, construct_patch_path
 from src.helpers import select_device
 
@@ -22,7 +22,7 @@ class TrainDataset(Dataset):
     def __init__(self,
                  data_dir: str,
                  metadata: pd.DataFrame,
-                 transform=None,
+                 transform: transforms.Compose | None = None,
                  grid_length: float | None = None,
                  pseudo_label_generator: torch.nn.Module | None = None):
         """
@@ -47,24 +47,18 @@ class TrainDataset(Dataset):
         # Convert speciesId to integer type
         self.metadata['speciesId'] = self.metadata['speciesId'].astype(int)
 
+        # Generate plain labels
         self.label_dict = self.plain_labels()
-        self.drop_duplicates()
+        # Drop duplicate rows based on 'surveyId' column
+        self.metadata = self.metadata.drop_duplicates(subset="surveyId").reset_index(drop=True)
 
         if grid_length:
+            # Generate box label union
             self.label_dict = self.box_label_union(grid_length)
 
         elif pseudo_label_generator:
+            # Generate pseudo labels
             self.label_dict = self.pseudo_labels(pseudo_label_generator)
-    
-    @overload
-    def __init__(self,):
-    
-    
-    def drop_duplicates(self):
-        """
-        Drop duplicate rows from the metadata DataFrame based on the 'surveyId' column.
-        """
-        self.metadata = self.metadata.drop_duplicates(subset="surveyId").reset_index(drop=True)
 
     def plain_labels(self) -> dict[int, list[int]]:
         """
