@@ -24,6 +24,9 @@ https://www.kaggle.com/competitions/geolifeclef-2025
   - `dataset`: enthält den Quellcode zur Datenverarbeitung
   - `model`: enthält den Quellcode zum Modelltraining
   - `helpers.py`: Helferfunktionen
+- `data`: Enthält die Trainingsdaten
+- `model_checkpoints`: Enthält die gespeicherten Modellcheckpoints - in der Abgabe nicht enhalten, da zu groß für Moodle
+- `csv_submissions`: Enthält die CSV-Dateien für die Submissions, berechnet im Notebook
 - `interface.py`: Interface zur Datenvisualisierung
 - `requirements.txt`: Auflistung notwendiger Libraries
 - `Modelltraining.ipynb`: Eigenes Notebook zum Trainieren des Modells

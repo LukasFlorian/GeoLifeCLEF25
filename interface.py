@@ -91,7 +91,7 @@ def quantile_normalize(band, low=2, high=98):
 
 
 def get_image_path(
-    survey_id, base_path="../../geolifeclef-2025/SatelitePatches/PA-train"
+    survey_id, base_path="./data/SatellitePatches/PA-train"
 ):
     """Generate image path based on surveyId with corrected folder structure."""
     survey_str = str(survey_id)
@@ -157,7 +157,7 @@ def calculate_comprehensive_spectral_indices(bands, use_processed=False):
 
 @st.cache_data
 def load_satellite_image(
-    survey_id, base_path="../../geolifeclef-2025/SatelitePatches/PA-train"
+    survey_id, base_path="./data/SatellitePatches/PA-train"
 ):
     """Load satellite image and return both raw and processed versions."""
     image_path = get_image_path(survey_id, base_path)
@@ -206,7 +206,7 @@ def find_available_survey_ids_for_species(po_df, pa_df, species_id, max_samples=
     available_surveys = []
 
     for survey_id in survey_ids[: max_samples * 3]:  # Check more than needed
-        base_path = "../../geolifeclef-2025/SatelitePatches/PA-train"
+        base_path = "./data/SatellitePatches/PA-train"
 
         image_path = get_image_path(survey_id, base_path)
 
@@ -423,7 +423,7 @@ def load_data():
         with st.spinner("Loading GeoLifeCLEF25 datasets..."):
             possible_paths = [
                 "GLC25_PO_metadata_train.csv",
-                "../../geolifeclef-2025/GLC25_P0_metadata_train.csv",
+                "./data/GLC25_P0_metadata_train.csv",
                 "./data/GLC25_PO_metadata_train.csv",
             ]
 
